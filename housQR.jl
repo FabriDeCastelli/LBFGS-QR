@@ -16,19 +16,7 @@ end
 
 
 
-function householder_vector(x::Vector{T})::Tuple{Vector{T}, T} where T
-    # returns the normalized vector u such that H*x is a multiple of e_1
-    s = norm(x)
-    if x[1] ≥ 0
-        s = -s
-    end
-    u = copy(x)
-    u[1] -= s
-    u ./= norm(u)
-    return u, s
-end
-
-function householder_vector(x::Matrix{T})::Tuple{Matrix{T}, T} where T
+function householder_vector(x::AbstractVecOrMat{T})::Tuple{AbstractVecOrMat{T}, T} where T
     # returns the normalized vector u such that H*x is a multiple of e_1
     s = norm(x)
     if x[1] ≥ 0
@@ -45,12 +33,12 @@ function qrfact(A::Matrix{T})::QRhous where T
     R = deepcopy(A)
     d = zeros(n)
 
-    for k ∈ 1:n
-        (u, s) = householder_vector(R[k:end, k])
+    for k ∈ 1:min(n, m)
+        @views (u, s) = householder_vector(R[k:m, k])
         # construct R
         d[k] = s
-        R[k:end, k+1:end] -= 2 * u * (u' * R[k:end, k+1:end])
-        R[k:end, k] .= u
+        @views R[k:m, k+1:n] -= 2 * u * (u' * R[k:m, k+1:n])
+        R[k:m, k] .= u
     end
     return QRhous(R, d)
 end
@@ -61,7 +49,7 @@ function qyhous(A::QRhous{T}, y::AbstractArray{T}) where T
     z = deepcopy(y)
     for j ∈ n:-1:1
         # z[j:m] = z[j:m] - 2 * A.A[j:m, j] * (A.A[j:m, j]' * z[j:m])
-        z[j:m] -= 2 * A.A[j:m, j] .* dot(A.A[j:m, j], z[j:m])
+        @views z[j:m] -= 2 * A.A[j:m, j] .* dot(A.A[j:m, j], z[j:m])
     end
     return z
 end
@@ -71,7 +59,7 @@ function qyhoust(A::QRhous{T}, y::AbstractArray{T}) where T
     z = deepcopy(y)
     for j ∈ 1:n
         # z[j:m] = z[j:m] - A.A[j:m, j] * (A.A[j:m, j]' * z[j:m])
-        z[j:m] -= 2 * A.A[j:m, j] .* dot(A.A[j:m, j], z[j:m])
+        @views z[j:m] -= 2 * A.A[j:m, j] .* dot(A.A[j:m, j], z[j:m])
     end
     return z
 end
@@ -126,7 +114,7 @@ function (\)(A::QRhous{T}, b::AbstractVector{T}) where T
     v = qyhoust(A, b)
     x = zeros(m)
     for j ∈ m:-1:1
-        x[j] = (v[j] - dot(x[j+1:m], A.A[j, j+1:m])) * A.d[j]^-1
+        @views x[j] = (v[j] - dot(x[j+1:m], A.A[j, j+1:m])) * A.d[j]^-1
     end
     return x
 end
