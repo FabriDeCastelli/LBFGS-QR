@@ -45,7 +45,7 @@ end
 
 
 function qyhous(A::QRhous{T}, y::AbstractArray{T}) where T
-    m, n = size(A)
+    m, n = size(A.A)
     z = deepcopy(y)
     for j ∈ n:-1:1
         # z[j:m] = z[j:m] - 2 * A.A[j:m, j] * (A.A[j:m, j]' * z[j:m])
@@ -62,6 +62,11 @@ function qyhoust(A::QRhous{T}, y::AbstractArray{T}) where T
         @views z[j:m] -= 2 * A.A[j:m, j] .* dot(A.A[j:m, j], z[j:m])
     end
     return z
+end
+
+function multiplybyr(A::QRhous{T}, y::AbstractArray{T}) where T
+    m, n = size(A.A)
+    vcat(A.R * y, zeros(m-n))
 end
 
 function calculateQ(A::QRhous{T}) where T
@@ -83,6 +88,7 @@ function calculateR(A::QRhous{T}) where T
         return A.AR
     end
     m, n = size(A.A)
+    @show triu(A.A[1:n, :], 1)
     A.AR = triu(A.A[1:n, :], 1) + diagm(A.d)
     return A.AR
 end
@@ -113,14 +119,15 @@ function (\)(A::QRhous{T}, b::AbstractVector{T}) where T
     n, m = size(A)
     v = qyhoust(A, b)
     x = zeros(m)
-    for j ∈ m:-1:1
+
+    for j ∈ min():-1:1
         @views x[j] = (v[j] - dot(x[j+1:m], A.A[j, j+1:m])) * A.d[j]^-1
     end
     return x
 end
 
 function (*)(A::QRhous{T}, x::AbstractVecOrMat{T}) where T
-    return qyhous(A, (A.R * x))
+    return qyhous(A, multiplybyr(A, x))
 end
 
 end
