@@ -185,7 +185,7 @@ function calculateR(A::QRhous{T}) where T
     end
     m, n = size(A.A)
     min_size = min(m, n)
-    @show triu(A.A[1:n, :], 1)
+    # @show triu(A.A[1:n, :], 1)
     A.AR = triu(A.A[1:min_size, 1:min_size], 1) + diagm(A.d)
     return A.AR
 end
