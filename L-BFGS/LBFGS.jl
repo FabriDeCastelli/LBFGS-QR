@@ -1,0 +1,146 @@
+module LBFGS
+
+using LinearAlgebra: norm, I, eigvals, dot
+using DataStructures: CircularBuffer
+
+export LimitedMemoryBFGS
+
+function ArmijoWolfeLineSearch(
+        f,
+        x::AbstractArray,
+        p::AbstractArray;
+        αinit::Real=1,
+        τ::Real=1.1,
+        c1::Real=1e-4,
+        c2::Real=0.9,
+        ϵα::Real=1e-16,
+        ϵgrad::Real=1e-12,
+        safeguard::Real=0.20,
+        MaxEvaluations::Integer=1000
+    )
+
+    ϕ = (α) -> begin
+        v, _ = f(x + α * p)
+        return v
+    end
+
+    ϕd = (α) -> begin
+        _, gradient = f(x + α * p)
+        return dot(p, gradient)
+    end
+
+    α = αinit
+    local αgrad
+
+    ϕ_0 = ϕ(0)
+    ϕd_0 = ϕd(0)
+
+    while MaxEvaluations > 0
+        αcurr = ϕ(α)
+        αgrad = ϕd(α)
+        MaxEvaluations -= 1
+
+        if (αcurr ≤ ϕ_0 + c1 * α * ϕd_0) && (abs(αgrad) ≤ -c2 * ϕd_0)
+            return α
+        end
+        
+        if αgrad ≥ 0
+            break
+        end
+        α *= τ
+    end
+
+    αlo = 0
+    αhi = α
+    αlograd = ϕd_0
+    αhigrad = αgrad
+
+    while (MaxEvaluations > 0) && (αhi - αlo) > ϵα && (αgrad > ϵgrad)
+        α = (αlo * αhigrad - αhi * αlograd)/(αhigrad - αlograd)
+        α = max(
+            αlo + (αhi - αlo) * safeguard,
+            min(αhi - (αhi - αlo) * safeguard, α)
+        )
+
+        αcurr = ϕ(α)
+        αgrad = ϕd(α)
+        MaxEvaluations -= 1
+
+        if (αcurr ≤ ϕ_0 + c1 * α * ϕd_0) && (abs(αgrad) ≤ -c2 * ϕd_0)
+            break
+        end
+
+        if αgrad < 0
+            αlo = α
+            αlograd = αgrad
+        else
+            αhi = α
+            if αhi ≤ ϵα
+                break
+            end
+            αhigrad = αgrad
+        end
+    end
+
+    return α
+end
+
+function LimitedMemoryBFGS(f;
+        x::Union{Nothing, Vector}=nothing,
+        ϵ::Real=1e-6,
+        m::Integer=3
+    )
+
+    if isnothing(x)
+        _, x = f(nothing)
+    end
+
+    k = 0
+    _, gradient = f(x)
+    normgradient0 = norm(gradient)
+    H = CircularBuffer{NamedTuple}(m)
+
+    while norm(gradient) > ϵ * normgradient0
+        # two loop recursion for finding the direction
+        q = gradient
+        αstore = Array{eltype(x)}(undef, 0)
+
+        for i ∈ reverse(H)
+            αi = i[:ρ] * i[:s]' * q
+            push!(αstore, αi)
+            q -= αi * i[:y]
+        end
+        # choose H0 as something resembling the hessian
+        H0 = if isempty(H)
+            I
+        else
+            ((H[end][:s]' * H[end][:y])/(H[end][:y]' * H[end][:y])) * I
+        end
+        r = H0 * q
+        for i ∈ H
+            βi = i[:ρ] * i[:y]' * r
+            r += i[:s] * (pop!(αstore) - βi)
+        end
+        p = -r # direction
+
+        α = ArmijoWolfeLineSearch(f, x, p)
+
+        previousx = x
+        x = x + α * p
+
+        previousgradient = gradient
+        _, gradient = f(x)
+
+        s = x - previousx
+        y = gradient - previousgradient
+
+        curvature = dot(s, y)
+        ρ = 1 / curvature
+
+        push!(H, (; :ρ => ρ, :y => y, :s => s))
+    end
+
+    return (x, gradient)
+end
+
+end # module LBGGS

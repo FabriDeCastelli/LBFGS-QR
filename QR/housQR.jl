@@ -235,7 +235,11 @@ function (*)(A::QRhous{T}, x::AbstractVecOrMat{T}) where T
     return qyhous(A, multiplybyr(A, x))
 end
 
+@doc raw"""
+    show(io::IO, mime, A::QRhous{T})
 
+Pretty printing for the factoried matrix A. Computes explicitly Q and R.
+"""
 function Base.show(io::IO, mime::MIME{Symbol("text/plain")}, A::QRhous{T}) where T
     summary(io, A); println(io)
     print(io, "Q factor: ")
@@ -244,22 +248,38 @@ function Base.show(io::IO, mime::MIME{Symbol("text/plain")}, A::QRhous{T}) where
     show(io, mime, A.R)
 end
 
-# ------------------ Overloading ------------------
+@doc raw"""
+    getproperty(A::QRhous{T}, name::Symbol)
 
-function Base.getproperty(A::QRhous{T}, d::Symbol) where T
-    if d === :R
+The sintax A.Q calls getproperty(A, :Q). Calculates explicitely Q and R if required.
+"""
+function Base.getproperty(A::QRhous{T}, name::Symbol) where T
+    if name === :R
         return calculateR(A)
-    elseif d === :Q
+    elseif name === :Q
         return calculateQ(A)
     else
-        getfield(A, d)
+        getfield(A, name)
     end
 end
 
+@doc raw"""
+    propertynames(A::QRhous, [private::Bool = false])
+
+Returns a tuple of all the properties of a QRhous matrix.
+
+```jldoctest
+julia> :R ∈ propertynames(qrfact([1 0; 0 1]))
+true
+```
+"""
 Base.propertynames(A::QRhous, private::Bool=false) = (:R, :Q, (private ? fieldnames(typeof(A)) : ())...)
 
+@doc raw"""
+    size(A::QRhous)
+
+Returns the size of the original matrix A. It is also the size of the support matrix.
+"""
 Base.size(A::QRhous) = size(getfield(A, :A))
 
-
-end
-
+end # module housQR

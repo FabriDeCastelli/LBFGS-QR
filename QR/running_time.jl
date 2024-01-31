@@ -1,18 +1,15 @@
-
 include("housQR.jl")
-include("../utilities/functions.jl")
 using .housQR
-using Plots
-
-import Plots.plot
+using Plots: plot, savefig
 
 runs = 10
 num_rows = zeros(runs)
 run_time = zeros(runs)
 
-warm_up()
+# warm up
+qrfact([0. 1; 1 0]) \ [1.; 1]
 
-for i in 0:runs
+for i ∈ 0:runs
     m = 500 + i * 500
     A = rand(m, 300)
     b = rand(m)
@@ -28,4 +25,5 @@ for i in 0:runs
 end
 
 plot(num_rows, run_time, seriestype = :scatter, label = "QR Factorization")
-savefig("results/qr_scalability.png")
+mkpath("./results/")
+savefig("./results/qr_scalability.png")
