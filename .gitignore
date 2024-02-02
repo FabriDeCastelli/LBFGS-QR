@@ -38,3 +38,6 @@ ipython_config.py
 # Emacs
 \#*\#
 .\#*
+
+# project
+*/results/*
