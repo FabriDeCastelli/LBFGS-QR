@@ -17,31 +17,24 @@ function ArmijoWolfeLineSearch(
         ϵgrad::Real=1e-12,
         safeguard::Real=0.20,
         MaxEvaluations::Integer=1000
-    )
+    )::Tuple{Real, Integer}
 
     ϕ = (α) -> begin
-        v, _ = f(x + α * p)
-        return v
-    end
-
-    ϕd = (α) -> begin
-        _, gradient = f(x + α * p)
-        return dot(p, gradient)
+        v, gradient = f(x + α * p)
+        return (v, dot(p, gradient))
     end
 
     α = αinit
     local αgrad
 
-    ϕ_0 = ϕ(0)
-    ϕd_0 = ϕd(0)
+    ϕ_0, ϕd_0 = ϕ(0)
 
     while MaxEvaluations > 0
-        αcurr = ϕ(α)
-        αgrad = ϕd(α)
+        αcurr, αgrad = ϕ(α)
         MaxEvaluations -= 1
 
         if (αcurr ≤ ϕ_0 + c1 * α * ϕd_0) && (abs(αgrad) ≤ -c2 * ϕd_0)
-            return α
+            return (α, MaxEvaluations)
         end
         
         if αgrad ≥ 0
@@ -62,8 +55,7 @@ function ArmijoWolfeLineSearch(
             min(αhi - (αhi - αlo) * safeguard, α)
         )
 
-        αcurr = ϕ(α)
-        αgrad = ϕd(α)
+        αcurr, αgrad = ϕ(α)
         MaxEvaluations -= 1
 
         if (αcurr ≤ ϕ_0 + c1 * α * ϕd_0) && (abs(αgrad) ≤ -c2 * ϕd_0)
@@ -82,14 +74,15 @@ function ArmijoWolfeLineSearch(
         end
     end
 
-    return α
+    return (α, MaxEvaluations)
 end
 
 function LimitedMemoryBFGS(f;
-        x::Union{Nothing, Vector}=nothing,
+        x::Union{Nothing, AbstractVector}=nothing,
         ϵ::Real=1e-6,
-        m::Integer=3
-    )
+        m::Integer=3,
+        MaxEvaluations::Integer=10000
+    )::Tuple{AbstractVector, AbstractVector}
 
     if isnothing(x)
         _, x = f(nothing)
@@ -100,7 +93,7 @@ function LimitedMemoryBFGS(f;
     normgradient0 = norm(gradient)
     H = CircularBuffer{NamedTuple}(m)
 
-    while norm(gradient) > ϵ * normgradient0
+    while MaxEvaluations > 0 && norm(gradient) > ϵ * normgradient0
         # two loop recursion for finding the direction
         q = gradient
         αstore = Array{eltype(x)}(undef, 0)
@@ -123,13 +116,14 @@ function LimitedMemoryBFGS(f;
         end
         p = -r # direction
 
-        α = ArmijoWolfeLineSearch(f, x, p)
+        α, MaxEvaluations = ArmijoWolfeLineSearch(f, x, p, MaxEvaluations=MaxEvaluations)
 
         previousx = x
         x = x + α * p
 
         previousgradient = gradient
         _, gradient = f(x)
+        MaxEvaluations -= 1
 
         s = x - previousx
         y = gradient - previousgradient
@@ -137,7 +131,11 @@ function LimitedMemoryBFGS(f;
         curvature = dot(s, y)
         ρ = 1 / curvature
 
-        push!(H, (; :ρ => ρ, :y => y, :s => s))
+        if curvature ≤ 1e-16
+            empty!(H) # restart with gradient
+        else
+            push!(H, (; :ρ => ρ, :y => y, :s => s))
+        end
     end
 
     return (x, gradient)
