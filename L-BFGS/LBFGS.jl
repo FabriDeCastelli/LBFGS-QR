@@ -2,11 +2,14 @@ module LBFGS
 
 using LinearAlgebra: norm, I, eigvals, dot
 using DataStructures: CircularBuffer
+using ..OracleFunction
 
 export LimitedMemoryBFGS
 
+const armijiowolfeorexact = :exact
+
 function ArmijoWolfeLineSearch(
-        f,
+        f::Union{LeastSquaresF, OracleF},
         x::AbstractArray,
         p::AbstractArray;
         αinit::Real=1,
@@ -20,7 +23,8 @@ function ArmijoWolfeLineSearch(
     )::Tuple{Real, Integer}
 
     ϕ = (α) -> begin
-        v, gradient = f(x + α * p)
+        v = f.eval(x + α * p)
+        gradient = f.grad(x + α * p)
         return (v, dot(p, gradient))
     end
 
@@ -31,7 +35,7 @@ function ArmijoWolfeLineSearch(
 
     while MaxEvaluations > 0
         αcurr, αgrad = ϕ(α)
-        MaxEvaluations -= 1
+        MaxEvaluations -= 2
 
         if (αcurr ≤ ϕ_0 + c1 * α * ϕd_0) && (abs(αgrad) ≤ -c2 * ϕd_0)
             return (α, MaxEvaluations)
@@ -56,7 +60,7 @@ function ArmijoWolfeLineSearch(
         )
 
         αcurr, αgrad = ϕ(α)
-        MaxEvaluations -= 1
+        MaxEvaluations -= 2
 
         if (αcurr ≤ ϕ_0 + c1 * α * ϕd_0) && (abs(αgrad) ≤ -c2 * ϕd_0)
             break
@@ -77,19 +81,31 @@ function ArmijoWolfeLineSearch(
     return (α, MaxEvaluations)
 end
 
-function LimitedMemoryBFGS(f;
-        x::Union{Nothing, AbstractVector}=nothing,
-        ϵ::Real=1e-6,
+function ExactLineSearch(
+        f::LeastSquaresF,
+        x::AbstractArray,
+        p::AbstractArray;
+        MaxEvaluations::Integer=1000
+    )
+    MaxEvaluations -= 1
+    return (tomography(f, x, p), MaxEvaluations)
+end
+
+function LimitedMemoryBFGS(
+        f::Union{LeastSquaresF{T}, OracleF{T, F, G}};
+        x::Union{Nothing, AbstractVector{T}}=nothing,
+        ϵ::T=1e-6,
         m::Integer=3,
         MaxEvaluations::Integer=10000
-    )::Tuple{AbstractVector, AbstractVector}
+    )::Tuple{AbstractVector{T}, T, AbstractVector{T}} where {T, F<:Function, G<:Function}
 
     if isnothing(x)
-        _, x = f(nothing)
+        x = f.starting_point
     end
 
     k = 0
-    _, gradient = f(x)
+    gradient = f.grad(x)
+    MaxEvaluations -= 1
     normgradient0 = norm(gradient)
     H = CircularBuffer{NamedTuple}(m)
 
@@ -116,13 +132,17 @@ function LimitedMemoryBFGS(f;
         end
         p = -r # direction
 
-        α, MaxEvaluations = ArmijoWolfeLineSearch(f, x, p, MaxEvaluations=MaxEvaluations)
+        if armijiowolfeorexact === :armijiowolfe || f isa OracleF
+            α, MaxEvaluations = ArmijoWolfeLineSearch(f, x, p, MaxEvaluations=MaxEvaluations)
+        elseif armijiowolfeorexact === :exact
+            α, MaxEvaluations = ExactLineSearch(f, x, p, MaxEvaluations=MaxEvaluations)
+        end
 
         previousx = x
         x = x + α * p
 
         previousgradient = gradient
-        _, gradient = f(x)
+        gradient = f.grad(x)
         MaxEvaluations -= 1
 
         s = x - previousx
@@ -138,7 +158,7 @@ function LimitedMemoryBFGS(f;
         end
     end
 
-    return (x, gradient)
+    return (x, f.eval(x), gradient)
 end
 
 end # module LBGGS

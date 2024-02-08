@@ -15,13 +15,13 @@ for i ∈ 0:runs
     b = rand(m)
     elapsed_time = @elapsed begin
         QR = qrfact(A)
+        x = QR \ b
     end 
     println("Time for $m rows: $elapsed_time")
     if i > 0
         num_rows[i] = m
         run_time[i] = elapsed_time
     end
-    x = QR \ b
 end
 
 plot(num_rows, run_time, seriestype = :scatter, label = "QR Factorization")

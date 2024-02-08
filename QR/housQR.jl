@@ -151,7 +151,7 @@ The Q factor of the QR factorization of A.
 
 """
 function calculateQ(A::QRhous{T}) where T
-    if A.AQ !== nothing
+    if !isnothing(A.AQ)
         return A.AQ
     end
     m, n = size(A.A)
@@ -180,7 +180,7 @@ The R factor of the QR factorization of A.
 
 """
 function calculateR(A::QRhous{T}) where T
-    if A.AR !== nothing
+    if !isnothing(A.AR)
         return A.AR
     end
     m, n = size(A.A)
