@@ -97,7 +97,7 @@ function LimitedMemoryBFGS(
         ϵ::T=1e-6,
         m::Integer=3,
         MaxEvaluations::Integer=10000
-    )::Tuple{AbstractVector{T}, T, AbstractVector{T}} where {T, F<:Function, G<:Function}
+    )::Tuple{AbstractVector{T}, T, AbstractVector{T}, Integer} where {T, F<:Function, G<:Function}
 
     if isnothing(x)
         x = f.starting_point
@@ -158,7 +158,7 @@ function LimitedMemoryBFGS(
         end
     end
 
-    return (x, f.eval(x), gradient)
+    return (x, f.eval(x), gradient, MaxEvaluations)
 end
 
 end # module LBGGS

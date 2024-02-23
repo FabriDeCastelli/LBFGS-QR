@@ -36,7 +36,7 @@ function get_dataset(file_path::String, lambda::Float64)
 
 
     # w is our initial starting point 
-    w = randn(n)
+    w = ones(n)
 
     # w_star is the optimal solution of the julia solver 
     w_star = X_hat \ y_hat
