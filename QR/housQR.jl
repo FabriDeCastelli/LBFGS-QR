@@ -193,7 +193,8 @@ end
 """
     (\\)(A::QRhous{T}, b::AbstractVector{T}) where T
 
-Solves the linear system ``Ax = b`` using the QR factorization of A.
+Solves the linear system ``Ax = b`` using the QR factorization of A. 
+First, it computes the product ``Q_0^Tb`` and then solves the triangular system ``Rx = Q_0^Tb`` via backsubstitution.
 
 ### Input
 
@@ -207,11 +208,12 @@ The solution vector x.
 """
 function (\)(A::QRhous{T}, b::AbstractVector{T}) where T
     m, n = size(A)
+    # Compu
     v = qyhoust(A, b)
     x = zeros(n)
 
     for j ∈ min(m, n):-1:1
-        @views x[j] = (v[j] - dot(x[j+1:n], A.A[j, j+1:n])) * A.d[j]^-1
+        @views x[j] = (v[j] - dot(x[j+1:n], A.A[j, j+1:n])) * inv(A.d[j])
     end
     return x
 end
