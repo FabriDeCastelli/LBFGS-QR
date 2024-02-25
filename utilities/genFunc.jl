@@ -1,22 +1,26 @@
 include("dataset.jl")
 using Random
 
-datasetpath = joinpath(@__DIR__, "../data_for_testing/dataset.csv")
-VALID = [:dataset, :randDataset, :exactRandDataset, :rand, :exactRand]
+local datasetpath = joinpath(@__DIR__, "../data_for_testing/dataset.csv")
+local VALID = [:dataset, :randDataset, :exactRandDataset, :rand, :exactRand]
 
 @doc raw"""
 ﻿genFunc(t::Symbol, [lambda::Real=1, m::Integer=1000, n::Integer=10, rng=default_rng()])
 
-Generates different matrices
+Generates different matrices for the least squares problem
 
 ### Input
 
-- `A` -- the QR factorization of A.
-- `y` -- the vector to be multiplied by ``Q_0^T``.
+- `t` -- The type of problem to generate. Possible values are:
+`:dataset`,
+`:randDataset`,
+`:exactRandDataset`,
+`:rand`,
+`:exactRand`
 
 ### Output
 
-The product ``Q_0^Ty``.
+A tuple with the matrix ``\hat{X}``, the vector ``\hat{y}``, the starting vector, the solution vector ``w^*``.
 
 See also [`gen_dataset`](@ref).
 """
