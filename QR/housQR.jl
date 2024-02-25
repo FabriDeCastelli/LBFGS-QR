@@ -5,10 +5,33 @@ using LinearAlgebra: norm, I, triu, diagm, dot
 
 export QRhous, qrfact
 
+@doc raw"""
+﻿QRhous{T <: Real}
+
+Struct that holds a QR factorization. The R factor is stored in
+the upper triangular part of the matrix A. The diagonal of R is stored in the
+vector d. The Q factor is computed lazily.
+"""
 mutable struct QRhous{T <: Real}
+    raw"""
+    `A` holds the R factor in the upper triangular part minus the diagonal
+    and the housholder vectors in the lower triangular.
+    """
     A::AbstractVecOrMat{T} # R after the QR factorization
+
+    raw"""
+    `d` holds the diagonal of the R factor.
+    """
     d::AbstractArray{T} # diagonal of R
+
+    raw"""
+    `AQ` holds the cached value for Q, is `nothing` if not yet computed
+    """
     AQ::Union{Nothing, AbstractVecOrMat{T}} # Q
+
+    raw"""
+    `AR` holds the cached value for R, is `nothing` if not yet computed
+    """
     AR::Union{Nothing, AbstractVecOrMat{T}} # R0
 
     QRhous(A, d, AQ=nothing, AR=nothing) = new{eltype(A)}(A, d, AQ, AR)
@@ -16,7 +39,7 @@ end
 
 
 @doc raw"""
-    householder_vector(x::AbstractVecOrMat{T})::Tuple{AbstractVecOrMat{T}, T} where T
+﻿householder_vector(x::AbstractVecOrMat{T})::Tuple{AbstractVecOrMat{T}, T}
 
 Computes a normalized vector u such that ``Hx = se_1, H = I - 2uu^T``.
 
@@ -42,7 +65,7 @@ function householder_vector(x::AbstractVecOrMat{T})::Tuple{AbstractVecOrMat{T}, 
 end
 
 @doc raw"""
-    qrfact(A::Matrix{T})::QRhous where T
+﻿qrfact(A::Matrix{T})::QRhous{T}
 
 Computes the QR factorization of A: A = QR.
 
@@ -52,12 +75,11 @@ Computes the QR factorization of A: A = QR.
 
 ### Output
 
-A QRhous object containing the QR factorization of A. The R factor is stored in
-the upper triangular part of the matrix A. The diagonal of R is stored in the
-vector d. The Q factor is computed lazily.
+A `QRhous` object containing the QR factorization of A.
 
+See also [`QRhous`](@ref).
 """
-function qrfact(A::Matrix{T})::QRhous where T
+function qrfact(A::Matrix{T})::QRhous{T} where T
     (m, n) = size(A)
     R = deepcopy(A)
     d = zeros(min(m, n))
@@ -73,7 +95,7 @@ function qrfact(A::Matrix{T})::QRhous where T
 end
 
 @doc raw"""
-    qyhoust(A::QRhous{T}, y::AbstractArray{T}) where T
+﻿qyhoust(A::QRhous{T}, y::AbstractArray{T})
 
 Computes the product ``Q_0^Ty,`` where ``Q_0`` is the ``n \times n`` (upper) part of the matrix Q of the QR factorization of A.
 
@@ -86,9 +108,9 @@ Computes the product ``Q_0^Ty,`` where ``Q_0`` is the ``n \times n`` (upper) par
 
 The product ``Q_0^Ty``.
 
-
+See also [`qyhous`](@ref).
 """
-function qyhoust(A::QRhous{T}, y::AbstractArray{T}) where T
+function qyhoust(A::QRhous{T}, y::AbstractArray{T})::AbstractArray{T} where T
     m, n = size(A.A)
     z = deepcopy(y)
 
@@ -99,7 +121,7 @@ function qyhoust(A::QRhous{T}, y::AbstractArray{T}) where T
 end
 
 @doc raw"""
-    qyhous(A::QRhous{T}, y::AbstractArray{T}) where T
+﻿qyhous(A::QRhous{T}, y::AbstractArray{T})
 
 Computes the product ``Q_0y,`` where ``Q_0`` is the ``n \times n`` (upper) part of the matrix Q of the QR factorization of A.
 
@@ -112,6 +134,7 @@ Computes the product ``Q_0y,`` where ``Q_0`` is the ``n \times n`` (upper) part 
 
 The product ``Q_0y``.
 
+See also [`qyhoust`](@ref).
 """
 function qyhous(A::QRhous{T}, y::AbstractArray{T}) where T
     m, n = size(A.A)
@@ -124,7 +147,7 @@ end
 
 
 @doc raw"""
-    multiplybyr(A::QRhous{T}, y::AbstractArray{T}) where T
+﻿multiplybyr(A::QRhous{T}, y::AbstractArray{T})
 
 Computes the product ``Ry,`` where ``R`` is the upper part of the matrix A, already transformed by the QR factorization.
 
@@ -137,17 +160,17 @@ function multiplybyr(A::QRhous{T}, y::AbstractArray{T}) where T
 end
 
 @doc raw"""
-    calculateQ(A::QRhous{T}) where T
+﻿calculateQ(A::QRhous{T})
 
-Computes the Q factor of the QR factorization of A.
+Computes the Q factor of the QR factorization of A. The result is cached.
 
 ### Input
 
-- `A` -- the QR factorization of A.
+- `A` -- the QR factorization of `A`.
 
 ### Output
 
-The Q factor of the QR factorization of A.
+The Q factor of the QR factorization of `A`.
 
 """
 function calculateQ(A::QRhous{T}) where T
@@ -165,18 +188,19 @@ function calculateQ(A::QRhous{T}) where T
 end
 
 @doc raw"""
-    calculateR(A::QRhous{T}) where T
+﻿calculateR(A::QRhous{T})
 
-Computes the R factor of the QR factorization of A. 
+Computes the R factor of the QR factorization of `A`. 
 The R factor is the upper part of the matrix A, already transformed by the QR factorization. 
+The result is cached.
 
 ### Input
 
-- `A` -- the QR factorization of A.
+- `A` -- the QR factorization of `A`.
 
 ### Output
 
-The R factor of the QR factorization of A.
+The R factor of the QR factorization of `A`.
 
 """
 function calculateR(A::QRhous{T}) where T
@@ -191,7 +215,7 @@ function calculateR(A::QRhous{T}) where T
 end
 
 """
-    (\\)(A::QRhous{T}, b::AbstractVector{T}) where T
+﻿(\\)(A::QRhous{T}, b::AbstractVector{T})
 
 Solves the linear system ``Ax = b`` using the QR factorization of A. 
 First, it computes the product ``Q_0^Tb`` and then solves the triangular system ``Rx = Q_0^Tb`` via backsubstitution.
@@ -219,7 +243,7 @@ function (\)(A::QRhous{T}, b::AbstractVector{T}) where T
 end
 
 @doc raw"""
-    (*)(A::QRhous{T}, x::AbstractVecOrMat{T}) where T
+﻿(*)(A::QRhous{T}, x::AbstractVecOrMat{T})
 
 Computes the product ``Ax,`` where ``A`` is the QR factorization of A.
 
@@ -238,7 +262,7 @@ function (*)(A::QRhous{T}, x::AbstractVecOrMat{T}) where T
 end
 
 @doc raw"""
-    show(io::IO, mime, A::QRhous{T})
+﻿show(io::IO, mime, A::QRhous{T})
 
 Pretty printing for the factoried matrix A. Computes explicitly Q and R.
 """
@@ -251,9 +275,9 @@ function Base.show(io::IO, mime::MIME{Symbol("text/plain")}, A::QRhous{T}) where
 end
 
 @doc raw"""
-    getproperty(A::QRhous{T}, name::Symbol)
+﻿getproperty(A::QRhous{T}, name::Symbol)
 
-The sintax A.Q calls getproperty(A, :Q). Calculates explicitely Q and R if required.
+Calculates explicitely Q and R if required.
 """
 function Base.getproperty(A::QRhous{T}, name::Symbol) where T
     if name === :R
@@ -266,7 +290,7 @@ function Base.getproperty(A::QRhous{T}, name::Symbol) where T
 end
 
 @doc raw"""
-    propertynames(A::QRhous, [private::Bool = false])
+﻿propertynames(A::QRhous, [private::Bool = false])
 
 Returns a tuple of all the properties of a QRhous matrix.
 
@@ -278,7 +302,7 @@ true
 Base.propertynames(A::QRhous, private::Bool=false) = (:R, :Q, (private ? fieldnames(typeof(A)) : ())...)
 
 @doc raw"""
-    size(A::QRhous)
+﻿size(A::QRhous)
 
 Returns the size of the original matrix A. It is also the size of the support matrix.
 """

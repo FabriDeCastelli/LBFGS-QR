@@ -13,15 +13,6 @@ num_rows = []
 run_time = []
 run_time_non_quadratic = []
 
-function helper(x::Union{Nothing, AbstractArray}, X, y)
-    if isnothing(x)
-        return (nothing, ones(eltype(y), size(X, 2)), nothing)
-    end
-
-    val = norm(X * x - y)
-    return (val, X' * (X * x - y), nothing)
-end
-
 # warm up
 LimitedMemoryBFGS(LeastSquaresF([1., 1], [1. 1; 0 1], [2., -1]))
 LimitedMemoryBFGS(OracleF([1., 1],
@@ -31,7 +22,7 @@ LimitedMemoryBFGS(OracleF([1., 1],
 
 for i ∈ 1:rows
     e, en = [], []
-    m = i * 200
+    m = i * 100
 
     for j ∈ 1:runs
         A = rand(m, 300)
@@ -59,7 +50,7 @@ for i ∈ 1:rows
     push!(run_time_non_quadratic, mean(en))
 end
 
-plt = plot(num_rows, run_time, seriestype = :scatter, label = "LBFGS", yscale = :log2)
+plt = plot(num_rows, run_time, seriestype = :scatter, label = "LBFGS")
 plot!(plt, num_rows, run_time_non_quadratic, seriestype = :scatter, label = "LBFGS non quadratic")
 xticks!(plt, num_rows .|> Int, map((x) -> (x[1]%2==1) ? x[2] : "", enumerate(num_rows .|> string)))
 #ylims!(plt, (0, Inf))
