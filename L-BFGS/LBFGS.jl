@@ -1,17 +1,18 @@
 module LBFGS
 
-using LinearAlgebra: norm, I, eigvals, dot
+using LinearAlgebra: norm, I, dot
 using DataStructures: CircularBuffer
 using ..OracleFunction
 
 export LimitedMemoryBFGS
 
-const armijiowolfeorexact = :exact
+local const armijiowolfeorexact = :exact
 
 function ArmijoWolfeLineSearch(
         f::Union{LeastSquaresF, OracleF},
         x::AbstractArray,
-        p::AbstractArray;
+        p::AbstractArray,
+        MaxEvaluations::Integer;
         αinit::Real=1,
         τ::Real=1.1,
         c1::Real=1e-4,
@@ -19,7 +20,6 @@ function ArmijoWolfeLineSearch(
         ϵα::Real=1e-16,
         ϵgrad::Real=1e-12,
         safeguard::Real=0.20,
-        MaxEvaluations::Integer=1000
     )::Tuple{Real, Integer}
 
     ϕ = (α) -> begin
@@ -84,13 +84,36 @@ end
 function ExactLineSearch(
         f::LeastSquaresF,
         x::AbstractArray,
-        p::AbstractArray;
-        MaxEvaluations::Integer=1000
+        p::AbstractArray,
+        MaxEvaluations::Integer
     )
     MaxEvaluations -= 1
     return (tomography(f, x, p), MaxEvaluations)
 end
 
+@doc raw"""
+﻿LimitedMemoryBFGS(f::Union{LeastSquaresF{T}, OracleF{T, F, G}}, [x::AbstractVector{T}, ϵ::T=1e-6, m::Integer=3, MaxEvaluations::Integer=10000])
+
+Computes the minimum of the input function `f`.
+
+### Input
+
+- `f` -- the input function to minimize.
+- `x` -- the starting point, if not specified the default one for the function `f` is used.
+- `ϵ` -- the tollerance for the stopping criteria.
+- `m` -- maximum number of vector to store that compute the approximate hessian.
+- `MaxEvaluations` -- maximum number of function evaluations. Both ```f.eval``` and ```f.grad``` are counted.
+
+### Output
+
+A named tuple containing:
+- `x` -- the minimum found
+- `eval` -- the value of the function at the minimum
+- `grad` -- the gradient of the function at the minimum
+- `RemainingEvaluations` -- the number of function evaluation not used.
+
+See also [`QRhous`](@ref).
+"""
 function LimitedMemoryBFGS(
         f::Union{LeastSquaresF{T}, OracleF{T, F, G}};
         x::Union{Nothing, AbstractVector{T}}=nothing,
@@ -133,9 +156,9 @@ function LimitedMemoryBFGS(
         p = -r # direction
 
         if armijiowolfeorexact === :armijiowolfe || f isa OracleF
-            α, MaxEvaluations = ArmijoWolfeLineSearch(f, x, p, MaxEvaluations=MaxEvaluations)
+            α, MaxEvaluations = ArmijoWolfeLineSearch(f, x, p, MaxEvaluations)
         elseif armijiowolfeorexact === :exact
-            α, MaxEvaluations = ExactLineSearch(f, x, p, MaxEvaluations=MaxEvaluations)
+            α, MaxEvaluations = ExactLineSearch(f, x, p, MaxEvaluations)
         end
 
         previousx = x
@@ -152,13 +175,17 @@ function LimitedMemoryBFGS(
         ρ = 1 / curvature
 
         if curvature ≤ 1e-16
-            empty!(H) # restart with gradient
+            empty!(H) # restart from the gradient
         else
             push!(H, (; :ρ => ρ, :y => y, :s => s))
         end
     end
 
-    return (x, f.eval(x), gradient, MaxEvaluations)
+    return (;
+        :x => x,
+        :eval => f.eval(x),
+        :grad => gradient,
+        :RemainingEvaluations => MaxEvaluations)
 end
 
 end # module LBGGS

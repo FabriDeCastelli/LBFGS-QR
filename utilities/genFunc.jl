@@ -26,7 +26,7 @@ See also [`gen_dataset`](@ref).
 """
 function genFunc(
         t::Symbol;
-        lambda::Real=1,
+        λ::Real=1,
         m::Integer=1000,
         n::Integer=10,
         rng=Random.default_rng())::Tuple{AbstractArray, AbstractArray, AbstractArray, AbstractArray}
@@ -35,11 +35,11 @@ function genFunc(
     end
 
     if t == :dataset
-        return get_dataset(datasetpath, lambda)
+        return get_dataset(datasetpath, λ)
     end
 
     if t == :randDataset
-        X_hat = [(rand(rng, n, m).*2 .-1); lambda .* I(m)]
+        X_hat = [(rand(rng, n, m).*2 .-1); λ .* I(m)]
         y_hat = [(rand(rng, n).*2 .-1); zeros(m)]
 
         # initial starting point 
@@ -52,7 +52,7 @@ function genFunc(
     end
 
     if t == :exactRandDataset
-        X_hat = [(rand(rng, n, m).*2 .-1); lambda .* I(m)]
+        X_hat = [(rand(rng, n, m).*2 .-1); λ .* I(m)]
         w_star = rand(rng, m).*2 .-1
 
         # initial starting point 

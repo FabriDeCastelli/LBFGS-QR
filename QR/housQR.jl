@@ -53,7 +53,6 @@ A tuple [u, s], where u is the householder vector of x and ``s = \big | x \big |
 
 """
 function householder_vector(x::AbstractVecOrMat{T})::Tuple{AbstractVecOrMat{T}, T} where T
-
     s = norm(x)
     if x[1] ≥ 0
         s = -s
@@ -145,7 +144,6 @@ function qyhous(A::QRhous{T}, y::AbstractArray{T}) where T
     return z
 end
 
-
 @doc raw"""
 ﻿multiplybyr(A::QRhous{T}, y::AbstractArray{T})
 
@@ -214,11 +212,11 @@ function calculateR(A::QRhous{T}) where T
     return A.AR
 end
 
-"""
+@doc """
 ﻿(\\)(A::QRhous{T}, b::AbstractVector{T})
 
 Solves the linear system ``Ax = b`` using the QR factorization of A. 
-First, it computes the product ``Q_0^Tb`` and then solves the triangular system ``Rx = Q_0^Tb`` via backsubstitution.
+First, it computes the product ```Q^t b``` and then solves the triangular system ```R x = Q^t b``` via backsubstitution.
 
 ### Input
 

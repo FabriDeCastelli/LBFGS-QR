@@ -24,12 +24,12 @@ A tuple containing
 - 'w_star' -- the optimal solution.
 
 """
-function get_dataset(file_path::String, lambda::Real)
-    X = CSV.File(file_path; header=false) |> DataFrame
+function get_dataset(filePath::String, λ::Real)
+    X = CSV.File(filePath; header=false) |> DataFrame
     X = Matrix(X)
 
     m, n = size(X)
-    X_hat = [transpose(X); lambda .* I(m)]
+    X_hat = [transpose(X); λ .* I(m)]
     y_hat = [(rand(n).*2 .-1); zeros(m)]
 
     # initial starting point 

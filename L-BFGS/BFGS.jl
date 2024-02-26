@@ -19,155 +19,7 @@ function BFGS(f;
               printing::Bool=true
               )::Tuple{Vector, String, Real}
 
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    # inner functions - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-    function f2phi(alpha, derivate=false)
-        #
-        # computes and returns the value of the tomography at alpha
-        #
-        #    phi( alpha ) = f( x + alpha * d )
-        #
-        # if Plotf > 2 saves the data in gap() for plotting
-        #
-        # if the second output parameter is required, put there the derivative
-        # of the tomography in alpha
-        #
-        #    phi'( alpha ) = < \nabla f( x + alpha * d ) , d >
-        #
-        # saves the point in lastx, the gradient in lastg and increases feval
-        lastx = x + alpha * d
-        (phi, lastg, _) = f(lastx)
-
-        if Plotf > 2
-            if fStar > - Inf
-                push!(gap, (phi - fStar) / max(abs(fStar), 1))
-            else
-                push!(gap, phi)
-            end
-        end
-
-        feval += 1
-
-        if derivate
-            return (phi, dot(d, lastg))
-        end
-        return (phi, nothing)
-    end
-
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-    function ArmijoWolfeLS(phi0, phip0, as, m1, m2, tau)
-
-        # performs an Armijo-Wolfe Line Search.
-        #
-        # phi0 = phi( 0 ), phip0 = phi'( 0 ) < 0
-        #
-        # as > 0 is the first value to be tested: if phi'( as ) < 0 then as is
-        # divided by tau < 1 (hence it is increased) until this does not happen
-        # any longer
-        #
-        # m1 and m2 are the standard Armijo-Wolfe parameters; note that the strong
-        # Wolfe condition is used
-        #
-        # returns the optimal step and the optimal f-value
-
-        lsiter = 1  # count iterations of first phase
-        local phips, phia
-        while feval ≤ MaxFeval
-            phia, phips = f2phi(as, true)
-
-            if (phia ≤ phi0 + m1 * as * phip0) && (abs(phips) ≤ - m2 * phip0)
-                if printing
-                    @printf("\t%2d", lsiter)
-                end
-                a = as
-                return (a, phia)  # Armijo + strong Wolfe satisfied, we are done
-            end
-            if phips ≥ 0
-                break
-            end
-            as = as / tau
-            lsiter += 1
-        end
-
-        if printing
-            @printf("\t%2d ", lsiter)
-        end
-        lsiter = 1  # count iterations of second phase
-
-        am = 0
-        a = as
-        phipm = phip0
-        while (feval ≤ MaxFeval ) && (as - am) > mina && (phips > 1e-12)
-
-            # compute the new value by safeguarded quadratic interpolation
-            a = (am * phips - as * phipm) / (phips - phipm)
-            a = max(am + ( as - am ) * sfgrd, min(as - ( as - am ) * sfgrd, a))
-
-            # compute phi(a)
-            phia, phip = f2phi(a, true)
-
-            if (phia ≤ phi0 + m1 * a * phip0) && (abs(phip) ≤ -m2 * phip0)
-                break  # Armijo + strong Wolfe satisfied, we are done
-            end
-
-            # restrict the interval based on sign of the derivative in a
-            if phip < 0
-                am = a
-                phipm = phip
-            else
-                as = a
-                if as ≤ mina
-                    break
-                end
-                phips = phip
-            end
-            lsiter += 1
-        end
-
-        if printing
-            @printf("%2d", lsiter)
-        end
-        return (a, phia)
-    end
-
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-    function BacktrackingLS( phi0 , phip0 , as , m1 , tau )
-
-        # performs a Backtracking Line Search.
-        #
-        # phi0 = phi( 0 ), phip0 = phi'( 0 ) < 0
-        #
-        # as > 0 is the first value to be tested, which is decreased by
-        # multiplying it by tau < 1 until the Armijo condition with parameter
-        # m1 is satisfied
-        #
-        # returns the optimal step and the optimal f-value
-
-        lsiter = 1  # count ls iterations
-        while feval ≤ MaxFeval && as > mina
-            phia, _ = f2phi(as)
-            if phia ≤ phi0 + m1 * as * phip0 # Armijo satisfied
-                break                        # we are done
-            end
-            as *= tau
-            lsiter += 1
-        end
-
-        if printing
-            @printf("\t%2d", lsiter)
-        end
-        return (as, phia)
-    end
-
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-
+    # DOCUMENTATION for the matlab function, functionality may differ
     #function [ x , status , v ] = BFGS( f , x , delta , eps , MaxFeval , ...
     #                                    m1 , m2 , tau , sfgrd , MInf , mina )
     #
@@ -295,6 +147,153 @@ function BFGS(f;
     # 1 = the level sets of f and the trajectory are plotted (when n = 2)
     # 2 = the function value / gap are plotted, iteration-wise
     # 3 = the function value / gap are plotted, function-evaluation-wise
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # inner functions - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    function f2phi(alpha, derivate=false)
+        #
+        # computes and returns the value of the tomography at alpha
+        #
+        #    phi( alpha ) = f( x + alpha * d )
+        #
+        # if Plotf > 2 saves the data in gap() for plotting
+        #
+        # if the second output parameter is required, put there the derivative
+        # of the tomography in alpha
+        #
+        #    phi'( alpha ) = < \nabla f( x + alpha * d ) , d >
+        #
+        # saves the point in lastx, the gradient in lastg and increases feval
+        lastx = x + alpha * d
+        (phi, lastg, _) = f(lastx)
+
+        if Plotf > 2
+            if fStar > - Inf
+                push!(gap, (phi - fStar) / max(abs(fStar), 1))
+            else
+                push!(gap, phi)
+            end
+        end
+
+        feval += 1
+
+        if derivate
+            return (phi, dot(d, lastg))
+        end
+        return (phi, nothing)
+    end
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    function ArmijoWolfeLS(phi0, phip0, as, m1, m2, tau)
+        # performs an Armijo-Wolfe Line Search.
+        #
+        # phi0 = phi( 0 ), phip0 = phi'( 0 ) < 0
+        #
+        # as > 0 is the first value to be tested: if phi'( as ) < 0 then as is
+        # divided by tau < 1 (hence it is increased) until this does not happen
+        # any longer
+        #
+        # m1 and m2 are the standard Armijo-Wolfe parameters; note that the strong
+        # Wolfe condition is used
+        #
+        # returns the optimal step and the optimal f-value
+
+        lsiter = 1  # count iterations of first phase
+        local phips, phia
+        while feval ≤ MaxFeval
+            phia, phips = f2phi(as, true)
+
+            if (phia ≤ phi0 + m1 * as * phip0) && (abs(phips) ≤ - m2 * phip0)
+                if printing
+                    @printf("\t%2d", lsiter)
+                end
+                a = as
+                return (a, phia)  # Armijo + strong Wolfe satisfied, we are done
+            end
+            if phips ≥ 0
+                break
+            end
+            as = as / tau
+            lsiter += 1
+        end
+
+        if printing
+            @printf("\t%2d ", lsiter)
+        end
+        lsiter = 1  # count iterations of second phase
+
+        am = 0
+        a = as
+        phipm = phip0
+        while (feval ≤ MaxFeval ) && (as - am) > mina && (phips > 1e-12)
+
+            # compute the new value by safeguarded quadratic interpolation
+            a = (am * phips - as * phipm) / (phips - phipm)
+            a = max(am + ( as - am ) * sfgrd, min(as - ( as - am ) * sfgrd, a))
+
+            # compute phi(a)
+            phia, phip = f2phi(a, true)
+
+            if (phia ≤ phi0 + m1 * a * phip0) && (abs(phip) ≤ -m2 * phip0)
+                break  # Armijo + strong Wolfe satisfied, we are done
+            end
+
+            # restrict the interval based on sign of the derivative in a
+            if phip < 0
+                am = a
+                phipm = phip
+            else
+                as = a
+                if as ≤ mina
+                    break
+                end
+                phips = phip
+            end
+            lsiter += 1
+        end
+
+        if printing
+            @printf("%2d", lsiter)
+        end
+        return (a, phia)
+    end
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    function BacktrackingLS( phi0 , phip0 , as , m1 , tau )
+
+        # performs a Backtracking Line Search.
+        #
+        # phi0 = phi( 0 ), phip0 = phi'( 0 ) < 0
+        #
+        # as > 0 is the first value to be tested, which is decreased by
+        # multiplying it by tau < 1 until the Armijo condition with parameter
+        # m1 is satisfied
+        #
+        # returns the optimal step and the optimal f-value
+
+        lsiter = 1  # count ls iterations
+        while feval ≤ MaxFeval && as > mina
+            phia, _ = f2phi(as)
+            if phia ≤ phi0 + m1 * as * phip0 # Armijo satisfied
+                break                        # we are done
+            end
+            as *= tau
+            lsiter += 1
+        end
+
+        if printing
+            @printf("\t%2d", lsiter)
+        end
+        return (as, phia)
+    end
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     Interactive = false # if we pause at every iteration
     local gap
