@@ -44,6 +44,15 @@ function LeastSquaresF(starting_point::AbstractArray{T}, X::AbstractMatrix{T}, y
     LeastSquaresF(o, X, y, symm, yX)
 end
 
+function LeastSquaresF(t::NamedTuple)
+    if [:X_hat, :y_hat, :start] ⊈ keys(t)
+        throw(ArgumentError("Input tuple does not contain necessary values, found: " * string(keys(t))))
+    end
+    starting_point, X, y = t[:start], t[:X_hat], t[:y_hat]
+
+    LeastSquaresF(starting_point, X, y)
+end
+
 @doc """
 ﻿tomography(l::LeastSquaresF{T, F, G}, w::AbstractArray{T}, p::AbstractArray{T})
 

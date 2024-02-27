@@ -1,8 +1,8 @@
 include("dataset.jl")
 using Random
 
-local datasetpath = joinpath(@__DIR__, "../data_for_testing/dataset.csv")
-local VALID = [:dataset, :randDataset, :exactRandDataset, :rand, :exactRand]
+datasetpath = joinpath(@__DIR__, "../data_for_testing/dataset.csv")
+VALID = [:dataset, :randDataset, :exactRandDataset, :rand, :exactRand]
 
 @doc raw"""
 ﻿genFunc(t::Symbol, [lambda::Real=1, m::Integer=1000, n::Integer=10, rng=default_rng()])
@@ -20,7 +20,7 @@ Generates different matrices for the least squares problem
 
 ### Output
 
-A tuple with the matrix ``\hat{X}``, the vector ``\hat{y}``, the starting vector, the solution vector ``w^*``.
+A named tuple with the matrix ``\hat{X}``, the vector ``\hat{y}``, the starting vector and the solution vector ``w^*``.
 
 See also [`gen_dataset`](@ref).
 """
@@ -29,13 +29,14 @@ function genFunc(
         λ::Real=1,
         m::Integer=1000,
         n::Integer=10,
-        rng=Random.default_rng())::Tuple{AbstractArray, AbstractArray, AbstractArray, AbstractArray}
+        rng=Random.default_rng())::NamedTuple
     if t ∉ VALID
         throw(ArgumentError("The type of matrix to produce is not recognized, available types: " * join(String.(VALID), ", ")))
     end
 
     if t == :dataset
-        return get_dataset(datasetpath, λ)
+        tmp = get_dataset(datasetpath, λ)
+        return (; :X_hat => tmp[1], :y_hat => tmp[2], :start => tmp[3], :w_star => tmp[4])
     end
 
     if t == :randDataset
@@ -48,7 +49,7 @@ function genFunc(
         # w_star is the optimal solution of the julia solver 
         w_star = X_hat \ y_hat
 
-        return (X_hat, y_hat, start, w_star)
+        return (; :X_hat => X_hat, :y_hat => y_hat, :start => start, :w_star => w_star)
     end
 
     if t == :exactRandDataset
@@ -60,7 +61,7 @@ function genFunc(
 
         y_hat = X_hat * w_star
 
-        return (X_hat, y_hat, start, w_star)
+        return (; :X_hat => X_hat, :y_hat => y_hat, :start => start, :w_star => w_star)
     end
 
     if t == :rand
@@ -73,7 +74,7 @@ function genFunc(
         # w_star is the optimal solution of the julia solver 
         w_star = X_hat \ y_hat
 
-        return (X_hat, y_hat, start, w_star)
+        return (; :X_hat => X_hat, :y_hat => y_hat, :start => start, :w_star => w_star)
     end
 
     if t == :exactRand
@@ -85,6 +86,6 @@ function genFunc(
 
         y_hat = X_hat * w_star
 
-        return (X_hat, y_hat, start, w_star)
+        return (; :X_hat => X_hat, :y_hat => y_hat, :start => start, :w_star => w_star)
     end
 end

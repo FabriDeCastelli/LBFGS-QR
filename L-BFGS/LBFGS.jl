@@ -2,11 +2,12 @@ module LBFGS
 
 using LinearAlgebra: norm, I, dot
 using DataStructures: CircularBuffer
+
 using ..OracleFunction
 
 export LimitedMemoryBFGS
 
-local const armijiowolfeorexact = :exact
+const armijiowolfeorexact = :exact
 
 function ArmijoWolfeLineSearch(
         f::Union{LeastSquaresF, OracleF},
@@ -115,12 +116,12 @@ A named tuple containing:
 See also [`QRhous`](@ref).
 """
 function LimitedMemoryBFGS(
-        f::Union{LeastSquaresF{T}, OracleF{T, F, G}};
+        f::Union{LeastSquaresF, OracleF};
         x::Union{Nothing, AbstractVector{T}}=nothing,
         ϵ::T=1e-6,
         m::Integer=3,
         MaxEvaluations::Integer=10000
-    )::Tuple{AbstractVector{T}, T, AbstractVector{T}, Integer} where {T, F<:Function, G<:Function}
+    )::NamedTuple where {T}
 
     if isnothing(x)
         x = f.starting_point
