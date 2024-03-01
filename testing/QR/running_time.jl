@@ -1,8 +1,8 @@
-include("housQR.jl")
+include("../../QR/housQR.jl")
 using .housQR
 using Plots: plot, savefig
 
-runs = 10
+runs = 5
 num_rows = zeros(runs)
 run_time = zeros(runs)
 
@@ -10,8 +10,10 @@ run_time = zeros(runs)
 qrfact([0. 1; 1 0]) \ [1.; 1]
 
 for i ∈ 0:runs
-    m = 500 + i * 500
-    A = rand(m, 300)
+    # m = 500 + i * 500
+    m = 300
+    #A = rand(m, 300)
+    A = rand(m, m)
     b = rand(m)
     elapsed_time = @elapsed begin
         QR = qrfact(A)

@@ -1,5 +1,5 @@
-include("OracleFunction.jl")
-include("LBFGS.jl")
+include("../../L-BFGS/OracleFunction.jl")
+include("../../L-BFGS/LBFGS.jl")
 using ..LBFGS
 using ..OracleFunction
 using Plots: plot, plot!, savefig, ylims!, xticks!
@@ -29,10 +29,11 @@ for i ∈ 1:rows
         [A[i, i] += 10 for i in minimum(size(A))]
         b = rand(m)
 
-        push!(e, @elapsed begin
-                sol = LimitedMemoryBFGS(LeastSquaresF(ones(size(A, 2)), A, b))
-            end
-        )
+        acd = @elapsed begin
+            sol = LimitedMemoryBFGS(LeastSquaresF(ones(size(A, 2)), A, b))
+        end
+
+        push!(e, acd)
 
         push!(en, @elapsed begin
             sol = LimitedMemoryBFGS(OracleF(
@@ -49,10 +50,3 @@ for i ∈ 1:rows
     push!(run_time, mean(e))
     push!(run_time_non_quadratic, mean(en))
 end
-
-plt = plot(num_rows, run_time, seriestype = :scatter, label = "LBFGS")
-plot!(plt, num_rows, run_time_non_quadratic, seriestype = :scatter, label = "LBFGS non quadratic")
-xticks!(plt, num_rows .|> Int, map((x) -> (x[1]%2==1) ? x[2] : "", enumerate(num_rows .|> string)))
-#ylims!(plt, (0, Inf))
-mkpath("./results/")
-savefig("./results/lbfgs_scalability.png")
