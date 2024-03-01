@@ -41,5 +41,6 @@ ipython_config.py
 
 # project
 */results/*
+*/results*/*
 
 *.xml
